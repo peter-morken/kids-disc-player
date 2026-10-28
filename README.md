@@ -46,7 +46,7 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 2. **Wire** the PN532 to the ESP32 over I²C. See [docs/build.md](docs/build.md#wiring).
 3. **Configure**:
    ```bash
-   cd firmware && cp include/config.example.h include/config.h
+   cd firmware && cp include/player_config.example.h include/player_config.h
    ```
    Then set your Wi-Fi details and the speaker's IP. Reserve that IP in your
    router so it never changes. Also check that Spotify is linked in the Sonos app.
@@ -66,7 +66,7 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 | Different disc | Starts the new one |
 | Blank or unreadable disc, or Sonos unreachable | LED blinks 3×; nothing else changes |
 
-Timings and volume are in `config.h`.
+Timings and volume are in `player_config.h`.
 
 ## Development
 

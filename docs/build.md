@@ -46,7 +46,7 @@ switch 2 OFF).
 | IRQ | GPIO 4 |
 | RSTO | GPIO 5 |
 
-Pins can be changed in `config.h`.
+Pins can be changed in `player_config.h`.
 
 ## Assembly
 
