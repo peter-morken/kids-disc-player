@@ -2,7 +2,9 @@
 
 ## Printing
 
-Export each part to STL from the `cad/` directory:
+Ready-to-print STLs are in [`cad/stl/`](../cad/stl), already in print
+orientation. If you change any parameters, re-export them all with
+`tools/render_previews.sh`, or export single parts from the `cad/` directory:
 
 ```bash
 openscad -D 'part="shell"' -o shell.stl enclosure.scad
