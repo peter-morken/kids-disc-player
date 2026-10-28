@@ -11,11 +11,11 @@ jobs:
       run:
         working-directory: firmware
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.platformio
           key: pio-${{ hashFiles('firmware/platformio.ini') }}
@@ -31,7 +31,7 @@ jobs:
       run:
         working-directory: cad
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y openscad
       - name: Export STLs
         run: |
@@ -40,7 +40,7 @@ jobs:
           openscad -D 'part="base"' -o stl/base.stl enclosure.scad
           openscad -D 'embed_tag=true' -o stl/disc-embedded-tag.stl disc.scad
           openscad -D 'embed_tag=false' -o stl/disc-open-pocket.stl disc.scad
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: stl
           path: cad/stl/

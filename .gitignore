@@ -1,5 +1,5 @@
 firmware/.pio/
-firmware/include/config.h
+firmware/include/player_config.h
 cad/stl/
 *.stl
 .vscode/

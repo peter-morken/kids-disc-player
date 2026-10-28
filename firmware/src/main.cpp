@@ -4,11 +4,13 @@
 #include <WiFi.h>
 #include <Wire.h>
 
-#if __has_include("config.h")
-#include "config.h"
+// Deliberately not "config.h": ESP-IDF ships headers by that name, and
+// __has_include would find one of those instead.
+#if __has_include("player_config.h")
+#include "player_config.h"
 #else
-#warning "include/config.h not found, building with config.example.h placeholders"
-#include "config.example.h"
+#warning "include/player_config.h not found, building with player_config.example.h placeholders"
+#include "player_config.example.h"
 #endif
 
 #include "disc_session.h"

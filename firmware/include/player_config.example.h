@@ -1,5 +1,5 @@
 #pragma once
-// Copy this file to config.h (git-ignored) and fill in your values.
+// Copy this file to player_config.h (git-ignored) and fill in your values.
 
 // --- Wi-Fi (2.4 GHz only; the ESP32 has no 5 GHz radio) ---
 #define WIFI_SSID "your-wifi"
