@@ -33,12 +33,15 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 | `docs/` | [Build guide](docs/build.md), [making discs](docs/discs.md), [setup guide for the household](docs/setup.md) |
 | `tools/` | `gen_root_cas.sh` regenerates the CA certificates the updater trusts |
 
-## Bill of materials (about $15 plus filament)
+## Bill of materials (about $18 plus filament)
 
 | Part | Notes |
 |---|---|
 | ESP32 DevKit (38-pin DevKitC or 30-pin DevKit V1) | Any classic ESP32 works; adjust `esp` in `enclosure.scad` if yours differs |
 | PN532 NFC module "V3" (red/blue, 42.7 × 40.4 mm) | Must support I²C (DIP switches) |
+| EC11 rotary encoder with push switch, 6 mm D-shaft, 20 mm shaft length | The volume knob |
+| WS2812 ring, 12 LEDs, 50 mm outer diameter | Volume gauge and status light |
+| 330 Ω resistor | Optional, in the LED ring's data line |
 | NTAG215 or NTAG213 round stickers, 25 mm | One per disc |
 | 4–6 female-female jumper wires | |
 | 4 × M3 × 10 self-tapping screws | Or M3 heat-set inserts (set `pilot_d = 4.0`) |
@@ -66,14 +69,33 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 
 | Event | What the player does |
 |---|---|
-| Disc inserted | Clears the speaker's queue, queues the disc's track, album or playlist, sets the start volume, and plays |
-| Disc removed for more than 1.5 s | Pauses |
-| Same disc back within 10 min | Resumes where it stopped |
+| Disc inserted | Waits 0.4 s for it to settle, spins the ring while it starts the disc from the beginning at **half the max volume**, then flashes green |
+| Disc removed for more than 1.5 s | Pauses, unless someone has since played something else from the Sonos app (then it leaves their music alone) |
+| Same disc back within 10 min | Resumes where it stopped, or starts over if the speaker has played something else in between |
+| Disc pulled in and out quickly | Nothing: too short to start, or too short to count as removed |
 | Different disc | Starts the new one |
-| Blank or unreadable disc, or Sonos unreachable | LED blinks 3×; nothing else changes |
+| End of the disc | Stops (repeat and shuffle are turned off when a disc starts) |
+| Knob turned | Changes the volume in steps of 2, never above the max; the ring shows the level as a fraction of the max, and the top LED blinks red at the cap |
+| Knob held 5 s | **Parent function:** the speaker's current volume becomes the new max (white flashes). See below |
+| Blank disc, or speaker unreachable | Ring flashes red; nothing else changes |
 
-The start volume is set on the setup page. Pins and timings are in
-`firmware/include/board.h`.
+When nothing is happening, the ring is off, because the player lives in a bedroom.
+
+### Setting the max volume
+
+Holding the knob for 5 s saves the speaker's **current** volume as the max.
+The knob itself can't go above the max, so a toddler holding the knob can
+only ever lower it. To raise it:
+
+1. Turn the speaker up in the Sonos app, or with its own buttons.
+2. Hold the knob for 5 s, until the ring flashes white.
+
+Max volumes below 5 are rejected. The max can also be set on the setup page.
+The knob's cap doesn't stop the Sonos app or the speaker's buttons. For a
+hard limit, also set **Settings → System → [room] → Volume Limit** in the
+Sonos app.
+
+Pins and timings are in `firmware/include/board.h`.
 
 ## Releasing and remote updates
 
@@ -128,9 +150,10 @@ CI runs both on every push and exports STLs for every CAD part as build artifact
   appears when the device needs setting up, and closes after 5 minutes.
 - **Updates trust whoever controls this GitHub repo.** Turn on two-factor
   authentication for the account.
-- **Resume continues whatever the speaker last had queued.** If someone
-  changes the music from the Sonos app in between, re-inserting the disc
-  resumes their music, not the disc's.
+- **"Is the speaker still playing our disc?" is a heuristic.** It compares
+  the queue's length and first track with what the disc put there. If someone
+  replaces the queue with exactly the same album, the device can't tell the
+  difference. Not yet verified against a real speaker.
 - **Spotify only.** Short `spotify.link/...` URLs are not supported, because
   they need an HTTP redirect to resolve. Use the full `open.spotify.com` link.
   Artist pages can't be queued.

@@ -6,10 +6,11 @@
 // Wi-Fi credentials are stored separately by the ESP32 Wi-Fi stack.
 struct PlayerSettings {
   std::string room;  // Sonos room name, as shown in the Sonos app
-  int startVolume;   // 0-100, or -1 to leave the volume alone
+  int maxVolume;     // knob cap, 5-100. Each new disc starts at half of it.
 };
 
 PlayerSettings loadSettings();
+void saveSettings(const PlayerSettings& settings);
 
 // Connects to the saved Wi-Fi. On first boot, or if the saved network can't be
 // reached, opens the setup portal instead and blocks until someone completes
