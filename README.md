@@ -94,3 +94,7 @@ CI runs both on every push and exports STLs for every CAD part as build artifact
 - **Spotify only.** Short `spotify.link/...` URLs are not supported, because
   they need an HTTP redirect to resolve. Use the full `open.spotify.com` link.
   Artist pages can't be queued.
+
+## License
+
+[MIT](LICENSE). Covers the firmware, CAD models and docs.
