@@ -23,6 +23,20 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
   new one with any NFC phone app.
 - **Both sides work, any rotation.** The tag sits in the centre of the disc.
 
+## The design
+
+| | |
+|---|---|
+| ![Assembled player](cad/preview/assembly.png) | ![Cutaway](cad/preview/cutaway.png) |
+| The player: disc in the slot, volume knob on the front | Cutaway: NFC reader (red) behind the slot, ESP32 (green) on the base, LED ring behind the knob |
+| ![Disc](cad/preview/disc.png) | ![Knob](cad/preview/knob.png) |
+| Disc, front: recess for a picture sticker | Knob, underside: D-shaft bore and nut recess |
+
+Printable STLs are in [`cad/stl/`](cad/stl). Click one on GitHub to turn it in
+3D. They're generated from the OpenSCAD sources in `cad/`. After changing
+those, run `tools/render_previews.sh` and commit the result. CI fails a PR
+that changes the CAD without updating the previews.
+
 ## Repository layout
 
 | Path | Contents |
@@ -31,7 +45,8 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 | `firmware/lib/discplayer/` | Hardware-free logic: NDEF parsing, Spotify links, Sonos SOAP and speaker discovery, version comparison, insert/remove state machine. Unit-tested on the host. |
 | `cad/` | Parametric OpenSCAD models: `disc.scad`, `enclosure.scad`, shared `params.scad` |
 | `docs/` | [Build guide](docs/build.md), [making discs](docs/discs.md), [setup guide for the household](docs/setup.md) |
-| `tools/` | `gen_root_cas.sh` regenerates the CA certificates the updater trusts |
+| `cad/stl/`, `cad/preview/` | Generated: printable STLs and the pictures above |
+| `tools/` | `render_previews.sh` regenerates the STLs and pictures; `gen_root_cas.sh` regenerates the CA certificates the updater trusts |
 
 ## Bill of materials (about $18 plus filament)
 

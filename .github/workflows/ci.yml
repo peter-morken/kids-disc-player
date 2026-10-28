@@ -32,24 +32,27 @@ jobs:
 
   cad:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: cad
     steps:
       - uses: actions/checkout@v7
-      - run: sudo apt-get update && sudo apt-get install -y openscad
-      - name: Export STLs
+        with:
+          fetch-depth: 0  # the freshness check diffs against the PR base
+      - name: Previews updated with the CAD
+        if: github.event_name == 'pull_request'
         run: |
-          mkdir -p stl
-          openscad -D 'part="shell"' -o stl/shell.stl enclosure.scad
-          openscad -D 'part="base"' -o stl/base.stl enclosure.scad
-          openscad -D 'embed_tag=true' -o stl/disc-embedded-tag.stl disc.scad
-          openscad -D 'embed_tag=false' -o stl/disc-open-pocket.stl disc.scad
-          openscad -o stl/knob.stl knob.scad
+          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          if grep -q '^cad/.*\.scad$' <<<"$changed" && ! grep -qE '^cad/(preview|stl)/' <<<"$changed"; then
+            echo "::error::cad/*.scad changed but cad/preview and cad/stl did not. Run tools/render_previews.sh and commit the result."
+            exit 1
+          fi
+      - run: sudo apt-get update && sudo apt-get install -y openscad xvfb
+      - name: Render previews and STLs
+        run: tools/render_previews.sh
       - uses: actions/upload-artifact@v7
         with:
-          name: stl
-          path: cad/stl/
+          name: cad
+          path: |
+            cad/stl/
+            cad/preview/
 
   # Pushing a tag like v1.2.0 publishes firmware.bin + version.txt as the latest
   # GitHub release. Devices in the field install it on their next boot.

@@ -6,10 +6,13 @@
 // Print the shell upside down (top face on the bed): no supports needed.
 // Print the base flat.
 // Export each part with:  openscad -D 'part="shell"' -o shell.stl enclosure.scad
+// "assembly" and "cutaway" are previews only. tools/render_previews.sh renders them.
 
 include <params.scad>
+use <disc.scad>
+use <knob.scad>
 
-part = "assembly";  // [shell, base, assembly]
+part = "assembly";  // [shell, base, assembly, cutaway]
 
 // --- Box ---
 box = [85, 60, 70];
@@ -146,20 +149,39 @@ module base() {
   }
 }
 
+// Everything that goes inside or onto the shell, in shell coordinates.
+module components() {
+  color("Crimson") translate([box.x / 2 - pn_board.x / 2, pn_y0, pn_z0]) cube(pn_board);
+  color("DarkGreen") translate([esp_x0, esp_y0, esp_standoff]) cube([esp.x, esp.y, 1.6]);
+  // LED ring: PCB against the inside of the front wall, LEDs in the pocket
+  translate([box.x / 2, wall, knob_z]) rotate([-90, 0, 0]) {
+    color("Black") difference() { cylinder(d = ring_od, h = 1.6); translate([0, 0, -1]) cylinder(d = ring_id, h = 4); }
+    color("White") for (i = [0 : 11]) rotate(i * 30) translate([ring_led_r, 0, -ring_led_h / 2]) cube([5, 5, ring_led_h], center = true);
+  }
+  // encoder body behind the wall, knob in front
+  color("Silver") translate([box.x / 2 - 6, wall, knob_z - 6]) cube([12, 6.5, 12]);
+  color("DimGray") translate([box.x / 2, -0.5, knob_z]) rotate([90, 0, 0]) knob();
+  color("Gold") translate([box.x / 2, slot_y + slot_w / 2 + disc_t / 2, slot_z0 + disc_d / 2]) rotate([90, 0, 0]) disc();
+}
+
 if (part == "shell") {
   translate([0, 0, box.z]) mirror([0, 0, 1]) shell();  // print orientation
 } else if (part == "base") {
   base();
-} else {
-  base();
+} else if (part == "cutaway") {
+  // Right half of the shell removed to show the reader, ESP32 and LED ring.
+  color("Gainsboro") base();
   translate([0, 0, base_t]) {
-    color("SteelBlue", 0.6) shell();
-    color("Crimson") translate([box.x / 2 - pn_board.x / 2, pn_y0, pn_z0]) cube(pn_board);
-    color("DarkGreen") translate([esp_x0, esp_y0, esp_standoff]) cube([esp.x, esp.y, 1.6]);
-    color("Black") translate([box.x / 2, wall, knob_z]) rotate([-90, 0, 0])
-      difference() { cylinder(d = ring_od, h = 1.6); translate([0, 0, -1]) cylinder(d = ring_id, h = 4); }
-    color("DimGray") translate([box.x / 2, -2, knob_z]) rotate([90, 0, 0]) cylinder(d = knob_d, h = knob_h);
-    color("Gold") translate([box.x / 2, slot_y + slot_w / 2 - disc_t / 2, slot_z0 + disc_d / 2])
-      rotate([-90, 0, 0]) cylinder(d = disc_d, h = disc_t);
+    color("WhiteSmoke") difference() {
+      shell();
+      translate([box.x / 2, -1, -1]) cube([box.x, box.y + 2, box.z + 2]);
+    }
+    components();
+  }
+} else {
+  color("Gainsboro") base();
+  translate([0, 0, base_t]) {
+    color("WhiteSmoke") shell();
+    components();
   }
 }
