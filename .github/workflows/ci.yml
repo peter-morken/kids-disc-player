@@ -23,7 +23,12 @@ jobs:
       - name: Unit tests
         run: pio test -e native
       - name: Build ESP32 firmware
-        run: pio run -e esp32dev
+        # Same version plumbing as a release, so a broken flag fails here first.
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DFIRMWARE_VERSION_RAW=v0.0.0
+        run: |
+          pio run -e esp32dev
+          grep -aq "kids-disc-player/v0.0.0" .pio/build/esp32dev/firmware.bin
 
   cad:
     runs-on: ubuntu-latest
@@ -44,3 +49,35 @@ jobs:
         with:
           name: stl
           path: cad/stl/
+
+  # Pushing a tag like v1.2.0 publishes firmware.bin + version.txt as the latest
+  # GitHub release. Devices in the field install it on their next boot.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [firmware, cad]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check tag format
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Tag must look like v1.2.3, got $GITHUB_REF_NAME"; exit 1; }
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install platformio
+      - name: Build release firmware
+        working-directory: firmware
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DFIRMWARE_VERSION_RAW=${{ github.ref_name }}
+        run: |
+          pio run -e esp32dev
+          grep -aq "kids-disc-player/${GITHUB_REF_NAME}" .pio/build/esp32dev/firmware.bin
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp firmware/.pio/build/esp32dev/firmware.bin firmware.bin
+          echo "$GITHUB_REF_NAME" > version.txt
+          gh release create "$GITHUB_REF_NAME" firmware.bin version.txt --title "$GITHUB_REF_NAME" --generate-notes
