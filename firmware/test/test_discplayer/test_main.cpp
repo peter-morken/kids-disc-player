@@ -3,10 +3,12 @@
 #include <string>
 #include <vector>
 
+#include "controls.h"
 #include "disc_session.h"
 #include "ndef.h"
 #include "soap.h"
 #include "sonos_discovery.h"
+#include "sonos_state.h"
 #include "spotify.h"
 #include "version.h"
 
@@ -162,6 +164,166 @@ void test_extract_rincon_id() {
   TEST_ASSERT_FALSE(extractRinconId("<html>not sonos</html>", id));
 }
 
+void test_session_waits_for_disc_to_settle() {
+  DiscSession s(400, 1500, 60000);
+  ASSERT_ACTION(DiscAction::None, s.update(0, "A"));
+  TEST_ASSERT_TRUE(s.settling());
+  ASSERT_ACTION(DiscAction::None, s.update(150, "A"));
+  ASSERT_ACTION(DiscAction::None, s.update(300, ""));  // one missed read mid-insert
+  ASSERT_ACTION(DiscAction::PlayNew, s.update(450, "A"));
+  TEST_ASSERT_FALSE(s.settling());
+}
+
+void test_session_brief_touch_does_nothing() {
+  DiscSession s(400, 1500, 60000);
+  ASSERT_ACTION(DiscAction::None, s.update(0, "A"));
+  ASSERT_ACTION(DiscAction::None, s.update(150, "A"));
+  // Pulled straight back out: the candidate expires, nothing plays or pauses.
+  for (uint32_t t = 300; t < 5000; t += 150) ASSERT_ACTION(DiscAction::None, s.update(t, ""));
+  TEST_ASSERT_FALSE(s.settling());
+  // Inserting again later needs the full settle time again.
+  ASSERT_ACTION(DiscAction::None, s.update(6000, "A"));
+  ASSERT_ACTION(DiscAction::PlayNew, s.update(6450, "A"));
+}
+
+void test_session_jerking_disc_in_and_out() {
+  DiscSession s(400, 1500, 60000);
+  s.update(0, "A");
+  ASSERT_ACTION(DiscAction::PlayNew, s.update(450, "A"));
+  // In and out every 600 ms: never out long enough to pause.
+  for (uint32_t t = 600; t < 6000; t += 600) {
+    ASSERT_ACTION(DiscAction::None, s.update(t, ""));
+    ASSERT_ACTION(DiscAction::None, s.update(t + 300, "A"));
+  }
+  // Out for good: one pause. Back in: settle, then resume (not restart).
+  ASSERT_ACTION(DiscAction::Pause, s.update(8000, ""));
+  ASSERT_ACTION(DiscAction::None, s.update(9000, "A"));
+  ASSERT_ACTION(DiscAction::Resume, s.update(9400, "A"));
+}
+
+// ---------- Knob, button, volume ----------
+
+int feed(QuadratureDecoder& d, std::initializer_list<int> pinStates) {
+  int total = 0;
+  for (int p : pinStates) total += d.update(p & 1, p & 2);
+  return total;
+}
+
+void test_quadrature_full_detents() {
+  QuadratureDecoder d;
+  TEST_ASSERT_EQUAL(1, feed(d, {3, 1, 0, 2, 3}));
+  TEST_ASSERT_EQUAL(-1, feed(d, {3, 2, 0, 1, 3}));
+  TEST_ASSERT_EQUAL(2, feed(d, {3, 1, 0, 2, 3, 1, 0, 2, 3}));
+}
+
+void test_quadrature_ignores_bounce_and_half_turns() {
+  QuadratureDecoder d;
+  TEST_ASSERT_EQUAL(1, feed(d, {3, 1, 3, 1, 0, 1, 0, 2, 0, 2, 3}));  // contact bounce
+  TEST_ASSERT_EQUAL(0, feed(d, {3, 1, 0, 1, 3}));                    // turned halfway, back
+  TEST_ASSERT_EQUAL(0, feed(d, {3, 3, 3}));                          // idle
+}
+
+void test_button_long_press_once_per_hold() {
+  ButtonDetector b(30, 5000);
+  int longs = 0;
+  for (uint32_t t = 0; t <= 8000; t += 10) longs += b.update(t, true) == ButtonEvent::LongPress;
+  TEST_ASSERT_EQUAL(1, longs);
+  for (uint32_t t = 8010; t <= 9000; t += 10) longs += b.update(t, false) == ButtonEvent::LongPress;
+  TEST_ASSERT_EQUAL(1, longs);
+}
+
+void test_button_short_and_bouncy_presses_are_not_long() {
+  ButtonDetector b(30, 5000);
+  int longs = 0;
+  uint32_t t = 0;
+  for (int press = 0; press < 20; ++press) {  // 20 presses of 3 s each
+    for (uint32_t end = t + 3000; t < end; t += 10) longs += b.update(t, true) == ButtonEvent::LongPress;
+    for (uint32_t end = t + 200; t < end; t += 10) longs += b.update(t, false) == ButtonEvent::LongPress;
+  }
+  // 20 ms release blips (bounce) don't restart the hold either way, but they
+  // are shorter than the debounce so a 6 s bouncy hold is still one hold.
+  for (uint32_t end = t + 6000; t < end; t += 10) {
+    const bool blip = (t % 1000) < 20;
+    longs += b.update(t, !blip) == ButtonEvent::LongPress;
+  }
+  TEST_ASSERT_EQUAL(1, longs);
+}
+
+void test_knob_respects_cap() {
+  bool atCap = false;
+  TEST_ASSERT_EQUAL(22, applyKnob(20, 1, 40, atCap));
+  TEST_ASSERT_FALSE(atCap);
+  TEST_ASSERT_EQUAL(40, applyKnob(36, 5, 40, atCap));
+  TEST_ASSERT_TRUE(atCap);
+  TEST_ASSERT_EQUAL(0, applyKnob(4, -5, 40, atCap));
+  TEST_ASSERT_FALSE(atCap);
+}
+
+void test_knob_when_speaker_is_above_cap() {
+  bool atCap = false;
+  TEST_ASSERT_EQUAL(70, applyKnob(70, 1, 40, atCap));  // up: leave it, don't jump down
+  TEST_ASSERT_TRUE(atCap);
+  TEST_ASSERT_EQUAL(40, applyKnob(70, -1, 40, atCap));  // down: drop to the cap
+}
+
+void test_max_volume_and_start_volume() {
+  int max = 0;
+  TEST_ASSERT_TRUE(maxFromCurrentVolume(35, max));
+  TEST_ASSERT_EQUAL(35, max);
+  TEST_ASSERT_FALSE(maxFromCurrentVolume(3, max));  // kid long-pressing at near-silence
+  TEST_ASSERT_EQUAL(35, max);
+  TEST_ASSERT_EQUAL(17, startVolumeFor(35));
+}
+
+void test_gauge_leds() {
+  TEST_ASSERT_EQUAL(0, gaugeLeds(0, 40, 12));
+  TEST_ASSERT_EQUAL(1, gaugeLeds(1, 40, 12));
+  TEST_ASSERT_EQUAL(6, gaugeLeds(20, 40, 12));
+  TEST_ASSERT_EQUAL(12, gaugeLeds(40, 40, 12));
+  TEST_ASSERT_EQUAL(12, gaugeLeds(70, 40, 12));
+}
+
+// ---------- Sonos state ----------
+
+void test_parse_volume() {
+  int v = -1;
+  TEST_ASSERT_TRUE(parseVolume("<s:Body><u:GetVolumeResponse><CurrentVolume>23</CurrentVolume>"
+                               "</u:GetVolumeResponse></s:Body>", v));
+  TEST_ASSERT_EQUAL(23, v);
+  TEST_ASSERT_FALSE(parseVolume("<CurrentVolume>abc</CurrentVolume>", v));
+  TEST_ASSERT_FALSE(parseVolume("<html/>", v));
+}
+
+void test_soap_value_and_empty_element() {
+  std::string out;
+  TEST_ASSERT_TRUE(soapValue("<CurrentURI>x-rincon-queue:RINCON_A01400#0</CurrentURI>", "CurrentURI", out));
+  TEST_ASSERT_EQUAL_STRING("x-rincon-queue:RINCON_A01400#0", out.c_str());
+  TEST_ASSERT_TRUE(soapValue("<NrTracks>0</NrTracks><CurrentURI/>", "CurrentURI", out));
+  TEST_ASSERT_EQUAL_STRING("", out.c_str());
+}
+
+void test_queue_fingerprint() {
+  const std::string browse =
+      "<u:BrowseResponse><Result>&lt;DIDL-Lite xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;&gt;"
+      "&lt;item id=&quot;Q:0/1&quot; parentID=&quot;Q:0&quot;&gt;"
+      "&lt;res protocolInfo=&quot;sonos.com-spotify:*:audio/x-spotify:*&quot;&gt;"
+      "x-sonos-spotify:spotify%3atrack%3a4uLU6hMCjMI75M1A2tKUQC?sid=12&amp;amp;flags=8224&lt;/res&gt;"
+      "&lt;/item&gt;&lt;/DIDL-Lite&gt;</Result>"
+      "<NumberReturned>1</NumberReturned><TotalMatches>12</TotalMatches><UpdateID>7</UpdateID>"
+      "</u:BrowseResponse>";
+  std::string fp;
+  TEST_ASSERT_TRUE(queueFingerprint(browse, fp));
+  TEST_ASSERT_EQUAL_STRING("12|x-sonos-spotify:spotify%3atrack%3a4uLU6hMCjMI75M1A2tKUQC?sid=12&flags=8224",
+                           fp.c_str());
+
+  const std::string empty =
+      "<Result>&lt;DIDL-Lite&gt;&lt;/DIDL-Lite&gt;</Result><NumberReturned>0</NumberReturned>"
+      "<TotalMatches>0</TotalMatches>";
+  TEST_ASSERT_TRUE(queueFingerprint(empty, fp));
+  TEST_ASSERT_EQUAL_STRING("0|", fp.c_str());
+  TEST_ASSERT_FALSE(queueFingerprint("<html>error</html>", fp));
+}
+
 // ---------- Sonos discovery ----------
 
 void test_ssdp_response_from_sonos() {
@@ -261,7 +423,7 @@ void test_version_ordering() {
 // ---------- Disc session ----------
 
 void test_session_insert_remove_resume() {
-  DiscSession s(1500, 60000);
+  DiscSession s(0, 1500, 60000);
   ASSERT_ACTION(DiscAction::None, s.update(0, ""));
   ASSERT_ACTION(DiscAction::PlayNew, s.update(100, "A"));
   ASSERT_ACTION(DiscAction::None, s.update(250, "A"));
@@ -277,14 +439,14 @@ void test_session_insert_remove_resume() {
 }
 
 void test_session_resume_window_expires() {
-  DiscSession s(1500, 60000);
+  DiscSession s(0, 1500, 60000);
   s.update(0, "A");
   ASSERT_ACTION(DiscAction::Pause, s.update(2000, ""));
   ASSERT_ACTION(DiscAction::PlayNew, s.update(2000 + 60001, "A"));
 }
 
 void test_session_different_disc_and_swap() {
-  DiscSession s(1500, 60000);
+  DiscSession s(0, 1500, 60000);
   s.update(0, "A");
   s.update(2000, "");
   ASSERT_ACTION(DiscAction::PlayNew, s.update(3000, "B"));
@@ -293,7 +455,7 @@ void test_session_different_disc_and_swap() {
 }
 
 void test_session_invalid_disc_does_not_pause() {
-  DiscSession s(1500, 60000);
+  DiscSession s(0, 1500, 60000);
   ASSERT_ACTION(DiscAction::PlayNew, s.update(0, "BLANK"));
   s.markActiveInvalid();
   ASSERT_ACTION(DiscAction::None, s.update(150, "BLANK"));  // no retry loop
@@ -302,7 +464,7 @@ void test_session_invalid_disc_does_not_pause() {
 }
 
 void test_session_survives_millis_wraparound() {
-  DiscSession s(1500, 60000);
+  DiscSession s(0, 1500, 60000);
   const uint32_t t0 = 0xFFFFFF00u;
   s.update(t0, "A");
   ASSERT_ACTION(DiscAction::None, s.update(t0 + 1000, ""));
@@ -336,5 +498,19 @@ int main() {
   RUN_TEST(test_zone_group_state_unknown_room);
   RUN_TEST(test_version_parsing);
   RUN_TEST(test_version_ordering);
+  RUN_TEST(test_session_waits_for_disc_to_settle);
+  RUN_TEST(test_session_brief_touch_does_nothing);
+  RUN_TEST(test_session_jerking_disc_in_and_out);
+  RUN_TEST(test_quadrature_full_detents);
+  RUN_TEST(test_quadrature_ignores_bounce_and_half_turns);
+  RUN_TEST(test_button_long_press_once_per_hold);
+  RUN_TEST(test_button_short_and_bouncy_presses_are_not_long);
+  RUN_TEST(test_knob_respects_cap);
+  RUN_TEST(test_knob_when_speaker_is_above_cap);
+  RUN_TEST(test_max_volume_and_start_volume);
+  RUN_TEST(test_gauge_leds);
+  RUN_TEST(test_parse_volume);
+  RUN_TEST(test_soap_value_and_empty_element);
+  RUN_TEST(test_queue_fingerprint);
   return UNITY_END();
 }

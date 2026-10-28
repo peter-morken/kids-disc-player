@@ -23,7 +23,8 @@
 #define SETUP_AP_NAME "DiscPlayer-Setup"
 // How long the portal stays up before the device gives up and retries.
 #define SETUP_PORTAL_TIMEOUT_S 300
-#define DEFAULT_START_VOLUME 20
+// Knob cap until a parent changes it (setup page, or a 5 s knob press).
+#define DEFAULT_MAX_VOLUME 40
 
 // --- Sonos ---
 // 1 = pull the speaker out of any group before playing. Sonos only accepts
@@ -39,10 +40,28 @@
 #define PN532_IRQ 4
 #define PN532_RST 5
 
-// Onboard LED on most ESP32 DevKit boards.
+// Onboard LED on most ESP32 DevKit boards (inside the box; for debugging).
 #define STATUS_LED_PIN 2
 
+// --- Volume knob: EC11 rotary encoder with push switch, common pin to GND ---
+#define KNOB_A_PIN 32
+#define KNOB_B_PIN 33
+#define KNOB_SWITCH_PIN 25
+// Set to 1 if turning clockwise lowers the volume (A/B wired the other way round).
+#define KNOB_REVERSED 0
+// Hold the knob this long to save the speaker's current volume as the new max.
+#define KNOB_LONG_PRESS_MS 5000
+
+// --- LED ring around the knob: WS2812/NeoPixel, 5 V, data in ---
+#define RING_PIN 27
+#define RING_LED_COUNT 12
+// 0-255. The ring sits in a bedroom; keep it dim. Also limits current draw.
+#define RING_BRIGHTNESS 40
+
 // --- Behaviour ---
+// A disc must sit in the slot this long before it starts (it passes the
+// antenna while sliding in, and a quick in-and-out shouldn't do anything).
+#define INSERT_SETTLE_MS 400
 // A disc must be missing this long before playback pauses (reads flicker).
 #define REMOVE_DEBOUNCE_MS 1500
 // Re-inserting the same disc within this window resumes instead of restarting.

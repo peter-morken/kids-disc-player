@@ -19,14 +19,33 @@ For the household receiving the player. You need a phone and about 5 minutes.
 3. Tap **Configure WiFi**, then:
    - pick your home Wi-Fi and type its password,
    - type the **Sonos room name**,
-   - optionally change the **start volume** (0–100, or −1 to leave the volume alone).
+   - optionally change the **max volume** (5–100). Each disc starts at half of it.
 4. Tap **Save**. The player restarts and joins your Wi-Fi. Your phone goes
    back to your normal network.
 5. Put a disc in. Music should start within a few seconds.
 
+## The light around the knob
+
+| Light | Meaning |
+|---|---|
+| Off | Nothing happening (normal) |
+| White spinner | Disc found, starting the music |
+| Green flash | Music started |
+| Orange gauge | Volume, as a share of the max. A red blink at the top means it's at the max |
+| Red flashes | Something went wrong: blank disc, or the speaker can't be reached |
+| Slow blue pulse | Setup mode: join **DiscPlayer-Setup** (see below) |
+| Orange spinner | Installing an update. Don't unplug |
+| White flashes | New max volume saved |
+
+## Changing the max volume
+
+Use the Sonos app or the speaker's buttons to set the loudest volume you want
+the child to have. Then hold the knob down for 5 seconds, until the light
+flashes white. From then on, the knob can't go louder than that.
+
 ## When it stops working
 
-The player opens **DiscPlayer-Setup** again by itself when:
+The light pulses slow blue, and the player opens **DiscPlayer-Setup** again by itself, when:
 
 - **it can't join the Wi-Fi**, for example after a new router or a password change.
   Repeat the first setup.

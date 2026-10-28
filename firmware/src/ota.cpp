@@ -7,6 +7,7 @@
 
 #include "board.h"
 #include "github_root_cas.h"
+#include "ring.h"
 #include "version.h"
 
 namespace {
@@ -47,11 +48,13 @@ void checkForUpdate() {
   }
 
   Serial.printf("Updating to %s\n", latest.c_str());
+  ringSetState(RingState::Updating);
   httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-  httpUpdate.setLedPin(STATUS_LED_PIN, HIGH);
   httpUpdate.rebootOnUpdate(true);  // only reached after the image is fully written and verified
   if (httpUpdate.update(client, kFirmwareUrl) == HTTP_UPDATE_FAILED) {
     Serial.printf("Update failed (%d): %s\n", httpUpdate.getLastError(),
                   httpUpdate.getLastErrorString().c_str());
+    ringSetState(RingState::Idle);
+    ringFlashError();
   }
 }
