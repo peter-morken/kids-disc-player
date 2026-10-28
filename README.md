@@ -51,20 +51,22 @@ that changes the CAD without updating the previews.
 ## Bill of materials
 
 Per player. "In stock" means already bought for this project; the pack sizes
-are what was ordered.
+are what was ordered. Where-to-buy links are AliExpress searches, because
+individual listings come and go, plus a reference product from a regular
+shop where the exact spec matters. Match the spec in the Notes column.
 
-| Part | Qty | Status | Notes |
-|---|---|---|---|
-| ESP32-S3 SuperMini | 1 | In stock (5-pack) | Solder wires directly to the pads; no pin headers needed |
-| PN532 NFC module "V3" (red/blue, 42.7 × 40.4 mm) | 1 | In stock (5 pcs) | Must support I²C (DIP switches) |
-| WS2812 ring, 12 LEDs, 50 mm outer diameter | 1 | **To buy** | The loose WS2812B LEDs in stock don't fit the ring pocket |
-| EC11 rotary encoder with push switch, 6 mm D-shaft, 20 mm shaft | 1 | **To buy** | The volume knob |
-| NTAG215 or NTAG213 round stickers, 25 mm | 1 per disc | **To buy** | |
-| 330 Ω resistor | 1 | Optional | In the LED ring's data line |
-| Hook-up wire | about 15 short lengths | | |
-| M3 × 10 self-tapping screws | 4 | | Or M3 heat-set inserts (set `pilot_d = 4.0`) |
-| USB-C cable and 5 V phone charger | 1 | | |
-| PLA or PETG, white or another light colour | about 120 g | | The LED ring shines through the shell |
+| Part | Qty | Status | Where to buy | Notes |
+|---|---|---|---|---|
+| ESP32-S3 SuperMini | 1 | In stock (5-pack) | [AliExpress](https://www.aliexpress.com/w/wholesale-esp32-s3-supermini.html) | Solder wires directly to the pads; no pin headers needed |
+| PN532 NFC module "V3" (red/blue, 42.7 × 40.4 mm) | 1 | In stock (5 pcs) | [AliExpress](https://www.aliexpress.com/w/wholesale-pn532-nfc-module-v3.html) | Must have I²C DIP switches |
+| WS2812B ring, 12 LEDs, 50 mm outer / 36 mm inner diameter | 1 | **To buy** | [AliExpress](https://www.aliexpress.com/w/wholesale-ws2812b-12-led-ring-50mm.html) · [reference: AZ-Delivery](https://www.az-delivery.de/en/collections/more-products-1/products/kopie-von-rgb-led-ring-ws2812-mit-12-rgb-leds-5v-fuer-arduino) | Inner diameter varies (35–37 mm) between makers; the enclosure pocket fits 36 ± 1 mm. The loose WS2812B LEDs in stock don't fit |
+| EC11 rotary encoder with push switch, 20 mm D-shaft | 1 | **To buy** | [AliExpress](https://www.aliexpress.com/w/wholesale-ec11-rotary-encoder-switch-20mm.html) · [reference: Sigmanortec](https://sigmanortec.ro/en/rotary-encoder-with-click-20mm-ec11) | Must be **20 pulses / 20 detents** per turn: with 15 pulses / 30 detents, the knob only registers every second click. 5 pins (3 encoder + 2 switch) |
+| NTAG215 round NFC stickers, 25 mm | 1 per disc | **To buy** | [AliExpress](https://www.aliexpress.com/w/wholesale-ntag215-25mm-sticker.html) · [reference: GoToTags](https://store.gototags.com/nfc-sticker-ntag215-25-mm-circle/) | NTAG213 works too. Not MIFARE Classic |
+| 330 Ω resistor | 1 | Optional | | In the LED ring's data line |
+| Hook-up wire | about 15 short lengths | | | |
+| M3 × 10 self-tapping screws | 4 | | | Or M3 heat-set inserts (set `pilot_d = 4.0`) |
+| USB-C cable and 5 V phone charger | 1 | | | |
+| PLA or PETG, white or another light colour | about 120 g | | | The LED ring shines through the shell |
 
 ## Quick start
 
