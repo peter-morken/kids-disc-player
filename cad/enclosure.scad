@@ -34,9 +34,11 @@ pn_board = [42.7, 1.6, 40.4];  // width (x), thickness (y), height (z)
 pn_lip = 1.5;                  // how far the rail lips cover the board edge
 pn_rail = 2;
 
-// --- ESP32 DevKit (38-pin DevKitC: 52 x 28.5; 30-pin DevKit V1: 51.5 x 28.5) ---
-esp = [52, 28.5];
-esp_standoff = 16;        // clears header pins pointing down
+// --- ESP32-S3 SuperMini (about 22.5 x 18 mm). Measure yours. ---
+// Solder wires straight to its pads (no pin headers) so it can sit low.
+// With headers pointing down, raise esp_standoff to about 10.
+esp = [22.6, 18.1];
+esp_standoff = 4;
 esp_block = 4;            // support blocks under the pin-free short ends
 usb_hole = [13, 9];       // width (y), height (z)
 
