@@ -45,6 +45,7 @@ jobs:
           openscad -D 'part="base"' -o stl/base.stl enclosure.scad
           openscad -D 'embed_tag=true' -o stl/disc-embedded-tag.stl disc.scad
           openscad -D 'embed_tag=false' -o stl/disc-open-pocket.stl disc.scad
+          openscad -o stl/knob.stl knob.scad
       - uses: actions/upload-artifact@v7
         with:
           name: stl

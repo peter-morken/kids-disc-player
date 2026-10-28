@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "board.h"
+#include "sonos_state.h"
 
 using namespace discplayer;
 
@@ -19,6 +20,8 @@ const char* kRenderingPath = "/MediaRenderer/RenderingControl/Control";
 const char* kRenderingUrn = "urn:schemas-upnp-org:service:RenderingControl:1";
 const char* kTopologyPath = "/ZoneGroupTopology/Control";
 const char* kTopologyUrn = "urn:schemas-upnp-org:service:ZoneGroupTopology:1";
+const char* kContentPath = "/MediaServer/ContentDirectory/Control";
+const char* kContentUrn = "urn:schemas-upnp-org:service:ContentDirectory:1";
 
 constexpr uint16_t kSsdpLocalPort = 50000;
 constexpr uint32_t kSsdpListenMs = 1500;
@@ -45,9 +48,22 @@ bool SonosClient::soap(const std::string& host, const char* path, const char* ur
   return ok;
 }
 
-bool SonosClient::avTransport(const char* action, SoapArgs args) {
+bool SonosClient::avTransport(const char* action, SoapArgs args, std::string* response) {
   args.insert(args.begin(), SoapArgs::value_type("InstanceID", "0"));
-  return soap(speaker_.host, kAvTransportPath, kAvTransportUrn, action, args);
+  return soap(speaker_.host, kAvTransportPath, kAvTransportUrn, action, args, response);
+}
+
+bool SonosClient::readQueueFingerprint(std::string& out) {
+  std::string resp;
+  return soap(speaker_.host, kContentPath, kContentUrn, "Browse",
+              {{"ObjectID", "Q:0"},
+               {"BrowseFlag", "BrowseDirectChildren"},
+               {"Filter", "*"},
+               {"StartingIndex", "0"},
+               {"RequestedCount", "1"},
+               {"SortCriteria", ""}},
+              &resp) &&
+         queueFingerprint(resp, out);
 }
 
 bool SonosClient::discover(const std::string& room) {
@@ -100,12 +116,13 @@ bool SonosClient::ensureSpeaker(const std::string& room) {
   return discover(room);
 }
 
-bool SonosClient::playSpotify(const SpotifyRef& ref, int startVolume) {
+bool SonosClient::playSpotify(const SpotifyRef& ref, int volume) {
   if (speaker_.host.empty()) return false;
 
 #if SONOS_UNGROUP
   avTransport("BecomeCoordinatorOfStandaloneGroup");  // harmless if already standalone
 #endif
+  ownsQueue_ = false;
   if (!avTransport("RemoveAllTracksFromQueue")) return false;
 
   bool queued = false;
@@ -123,15 +140,40 @@ bool SonosClient::playSpotify(const SpotifyRef& ref, int startVolume) {
   if (!avTransport("SetAVTransportURI",
                    {{"CurrentURI", "x-rincon-queue:" + speaker_.uuid + "#0"}, {"CurrentURIMetaData", ""}}))
     return false;
+  avTransport("SetPlayMode", {{"NewPlayMode", "NORMAL"}});  // stop at the end of the disc
   avTransport("Seek", {{"Unit", "TRACK_NR"}, {"Target", "1"}});
+  setVolume(volume);
+  if (!avTransport("Play", {{"Speed", "1"}})) return false;
 
-  if (startVolume >= 0) {
-    soap(speaker_.host, kRenderingPath, kRenderingUrn, "SetVolume",
-         {{"InstanceID", "0"}, {"Channel", "Master"}, {"DesiredVolume", std::to_string(startVolume)}});
-  }
-  return avTransport("Play", {{"Speed", "1"}});
+  ownsQueue_ = true;
+  if (!readQueueFingerprint(queueFingerprint_)) queueFingerprint_.clear();
+  return true;
+}
+
+bool SonosClient::stillOurs() {
+  if (speaker_.host.empty() || !ownsQueue_) return false;
+  std::string resp, uri;
+  if (!avTransport("GetMediaInfo", {}, &resp) || !soapValue(resp, "CurrentURI", uri)) return false;
+  if (uri != "x-rincon-queue:" + speaker_.uuid + "#0") return false;  // radio, line-in, other speaker's group
+  if (queueFingerprint_.empty()) return true;
+  std::string now;
+  return readQueueFingerprint(now) && now == queueFingerprint_;
 }
 
 bool SonosClient::resume() { return !speaker_.host.empty() && avTransport("Play", {{"Speed", "1"}}); }
 
 bool SonosClient::pause() { return !speaker_.host.empty() && avTransport("Pause"); }
+
+bool SonosClient::getVolume(int& volume) {
+  std::string resp;
+  return !speaker_.host.empty() &&
+         soap(speaker_.host, kRenderingPath, kRenderingUrn, "GetVolume", {{"InstanceID", "0"}, {"Channel", "Master"}},
+              &resp) &&
+         parseVolume(resp, volume);
+}
+
+bool SonosClient::setVolume(int volume) {
+  return !speaker_.host.empty() &&
+         soap(speaker_.host, kRenderingPath, kRenderingUrn, "SetVolume",
+              {{"InstanceID", "0"}, {"Channel", "Master"}, {"DesiredVolume", std::to_string(volume)}});
+}
