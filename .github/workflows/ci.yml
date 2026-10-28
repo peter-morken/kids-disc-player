@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('firmware/platformio.ini') }}
+      - run: pip install platformio
+      - name: Unit tests
+        run: pio test -e native
+      - name: Build ESP32 firmware
+        run: pio run -e esp32dev
+
+  cad:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cad
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y openscad
+      - name: Export STLs
+        run: |
+          mkdir -p stl
+          openscad -D 'part="shell"' -o stl/shell.stl enclosure.scad
+          openscad -D 'part="base"' -o stl/base.stl enclosure.scad
+          openscad -D 'embed_tag=true' -o stl/disc-embedded-tag.stl disc.scad
+          openscad -D 'embed_tag=false' -o stl/disc-open-pocket.stl disc.scad
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stl
+          path: cad/stl/
