@@ -202,7 +202,6 @@ void handleDisc(uint32_t now) {
 
 void setup() {
   Serial.begin(115200);
-  pinMode(STATUS_LED_PIN, OUTPUT);
   Serial.printf("\nKids Disc Player %s\n", FIRMWARE_VERSION);
   ringBegin();
 

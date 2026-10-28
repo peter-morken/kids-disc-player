@@ -34,26 +34,26 @@
 // The other value is tried automatically if this one is rejected.
 #define SPOTIFY_SERVICE_TYPE 2311
 
-// --- PN532 wiring (I2C mode: set the board's DIP switches to I2C) ---
-#define PN532_SDA 21
-#define PN532_SCL 22
-#define PN532_IRQ 4
-#define PN532_RST 5
+// Pins below are for the ESP32-S3 SuperMini, which exposes GPIO 1-13. GPIO 3
+// is a strapping pin and stays unused. GPIO 8/9 are the S3's default I2C pins.
 
-// Onboard LED on most ESP32 DevKit boards (inside the box; for debugging).
-#define STATUS_LED_PIN 2
+// --- PN532 wiring (I2C mode: set the board's DIP switches to I2C) ---
+#define PN532_SDA 8
+#define PN532_SCL 9
+#define PN532_IRQ 7
+#define PN532_RST 6
 
 // --- Volume knob: EC11 rotary encoder with push switch, common pin to GND ---
-#define KNOB_A_PIN 32
-#define KNOB_B_PIN 33
-#define KNOB_SWITCH_PIN 25
+#define KNOB_A_PIN 4
+#define KNOB_B_PIN 5
+#define KNOB_SWITCH_PIN 10
 // Set to 1 if turning clockwise lowers the volume (A/B wired the other way round).
 #define KNOB_REVERSED 0
 // Hold the knob this long to save the speaker's current volume as the new max.
 #define KNOB_LONG_PRESS_MS 5000
 
 // --- LED ring around the knob: WS2812/NeoPixel, 5 V, data in ---
-#define RING_PIN 27
+#define RING_PIN 2
 #define RING_LED_COUNT 12
 // 0-255. The ring sits in a bedroom; keep it dim. Also limits current draw.
 #define RING_BRIGHTNESS 40

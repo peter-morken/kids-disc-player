@@ -27,8 +27,8 @@ jobs:
         env:
           PLATFORMIO_BUILD_FLAGS: -DFIRMWARE_VERSION_RAW=v0.0.0
         run: |
-          pio run -e esp32dev
-          grep -aq "kids-disc-player/v0.0.0" .pio/build/esp32dev/firmware.bin
+          pio run -e esp32s3
+          grep -aq "kids-disc-player/v0.0.0" .pio/build/esp32s3/firmware.bin
 
   cad:
     runs-on: ubuntu-latest
@@ -76,12 +76,12 @@ jobs:
         env:
           PLATFORMIO_BUILD_FLAGS: -DFIRMWARE_VERSION_RAW=${{ github.ref_name }}
         run: |
-          pio run -e esp32dev
-          grep -aq "kids-disc-player/${GITHUB_REF_NAME}" .pio/build/esp32dev/firmware.bin
+          pio run -e esp32s3
+          grep -aq "kids-disc-player/${GITHUB_REF_NAME}" .pio/build/esp32s3/firmware.bin
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp firmware/.pio/build/esp32dev/firmware.bin firmware.bin
+          cp firmware/.pio/build/esp32s3/firmware.bin firmware.bin
           echo "$GITHUB_REF_NAME" > version.txt
           gh release create "$GITHUB_REF_NAME" firmware.bin version.txt --title "$GITHUB_REF_NAME" --generate-notes

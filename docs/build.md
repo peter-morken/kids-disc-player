@@ -47,23 +47,26 @@ measurements.
 Set the PN532's DIP switches to **I²C** (on the common V3 board: switch 1 ON,
 switch 2 OFF).
 
-| PN532 | ESP32 |
+The ESP32-S3 SuperMini's pins are labelled with bare GPIO numbers.
+Check them against your board's silkscreen: clones differ.
+
+| PN532 | ESP32-S3 SuperMini |
 |---|---|
 | VCC | 3V3 |
 | GND | GND |
-| SDA | GPIO 21 |
-| SCL | GPIO 22 |
-| IRQ | GPIO 4 |
-| RSTO | GPIO 5 |
+| SDA | 8 |
+| SCL | 9 |
+| IRQ | 7 |
+| RSTO | 6 |
 
 **Volume knob:** a bare EC11 rotary encoder with a push switch. Solder wires directly to it.
 
-| Encoder | ESP32 |
+| Encoder | ESP32-S3 SuperMini |
 |---|---|
-| A | GPIO 32 |
-| B | GPIO 33 |
+| A | 4 |
+| B | 5 |
 | C (middle pin of the three) | GND |
-| Switch (one of the two pins) | GPIO 25 |
+| Switch (one of the two pins) | 10 |
 | Switch (the other pin) | GND |
 
 If turning clockwise makes it quieter, set `KNOB_REVERSED 1` in `board.h`
@@ -71,11 +74,14 @@ If turning clockwise makes it quieter, set `KNOB_REVERSED 1` in `board.h`
 
 **LED ring:** 12 × WS2812 (NeoPixel), 50 mm across.
 
-| Ring | ESP32 |
+| Ring | ESP32-S3 SuperMini |
 |---|---|
-| 5V / VCC | VIN (5 V from USB) |
+| 5V / VCC | 5V (from USB) |
 | GND | GND |
-| DIN (data in) | GPIO 27, ideally through a 330 Ω resistor |
+| DIN (data in) | 2, ideally through a 330 Ω resistor |
+
+GPIO 3 is left free on purpose: it's a strapping pin that affects how the
+chip boots. GPIO 1, 11, 12 and 13 are free for later additions.
 
 The firmware keeps the ring dim (`RING_BRIGHTNESS`), so it draws well under
 the ~500 mA a USB port provides.
@@ -94,11 +100,13 @@ Pins can be changed in `firmware/include/board.h`.
    7 o'clock position: the volume gauge then fills clockwise from bottom left,
    like a dial.
 4. Push the knob onto the shaft.
-5. Flash, set up and test the ESP32 *before* closing the box (see the README).
-6. Lay the ESP32 on the base's cradle, USB end against the left wall, and fix
-   it with foam tape or a dot of hot glue. Its header pins point down between
-   the support blocks.
-7. Connect the jumpers, lower the shell over the base, and screw it on from
+5. Flash, set up and test the ESP32-S3 *before* closing the box (see the
+   README). If the first USB flash can't find the board, hold its **BOOT**
+   button while plugging in the USB cable, then flash again.
+6. Lay the ESP32-S3 on the base's cradle, USB-C end against the left wall,
+   and fix it with foam tape or a dot of hot glue. The cradle holds it by
+   its two ends; the wires leave between the support blocks.
+7. Lower the shell over the base, and screw it on from
    underneath.
 
 ## Checking read range

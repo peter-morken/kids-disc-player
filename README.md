@@ -28,7 +28,7 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 | | |
 |---|---|
 | ![Assembled player](cad/preview/assembly.png) | ![Cutaway](cad/preview/cutaway.png) |
-| The player: disc in the slot, volume knob on the front | Cutaway: NFC reader (red) behind the slot, ESP32 (green) on the base, LED ring behind the knob |
+| The player: disc in the slot, volume knob on the front | Cutaway: NFC reader (red) behind the slot, LED ring behind the knob. The ESP32-S3 sits low on the base, hidden behind the knob |
 | ![Disc](cad/preview/disc.png) | ![Knob](cad/preview/knob.png) |
 | Disc, front: recess for a picture sticker | Knob, underside: D-shaft bore and nut recess |
 
@@ -41,26 +41,30 @@ that changes the CAD without updating the previews.
 
 | Path | Contents |
 |---|---|
-| `firmware/` | PlatformIO project for the ESP32 (Arduino framework) |
+| `firmware/` | PlatformIO project for the ESP32-S3 SuperMini (Arduino framework) |
 | `firmware/lib/discplayer/` | Hardware-free logic: NDEF parsing, Spotify links, Sonos SOAP and speaker discovery, version comparison, insert/remove state machine. Unit-tested on the host. |
 | `cad/` | Parametric OpenSCAD models: `disc.scad`, `enclosure.scad`, shared `params.scad` |
 | `docs/` | [Build guide](docs/build.md), [making discs](docs/discs.md), [setup guide for the household](docs/setup.md) |
 | `cad/stl/`, `cad/preview/` | Generated: printable STLs and the pictures above |
 | `tools/` | `render_previews.sh` regenerates the STLs and pictures; `gen_root_cas.sh` regenerates the CA certificates the updater trusts |
 
-## Bill of materials (about $18 plus filament)
+## Bill of materials
 
-| Part | Notes |
-|---|---|
-| ESP32 DevKit (38-pin DevKitC or 30-pin DevKit V1) | Any classic ESP32 works; adjust `esp` in `enclosure.scad` if yours differs |
-| PN532 NFC module "V3" (red/blue, 42.7 × 40.4 mm) | Must support I²C (DIP switches) |
-| EC11 rotary encoder with push switch, 6 mm D-shaft, 20 mm shaft length | The volume knob |
-| WS2812 ring, 12 LEDs, 50 mm outer diameter | Volume gauge and status light |
-| 330 Ω resistor | Optional, in the LED ring's data line |
-| NTAG215 or NTAG213 round stickers, 25 mm | One per disc |
-| 4–6 female-female jumper wires | |
-| 4 × M3 × 10 self-tapping screws | Or M3 heat-set inserts (set `pilot_d = 4.0`) |
-| USB cable and 5 V phone charger | |
+Per player. "In stock" means already bought for this project; the pack sizes
+are what was ordered.
+
+| Part | Qty | Status | Notes |
+|---|---|---|---|
+| ESP32-S3 SuperMini | 1 | In stock (5-pack) | Solder wires directly to the pads; no pin headers needed |
+| PN532 NFC module "V3" (red/blue, 42.7 × 40.4 mm) | 1 | In stock (5 pcs) | Must support I²C (DIP switches) |
+| WS2812 ring, 12 LEDs, 50 mm outer diameter | 1 | **To buy** | The loose WS2812B LEDs in stock don't fit the ring pocket |
+| EC11 rotary encoder with push switch, 6 mm D-shaft, 20 mm shaft | 1 | **To buy** | The volume knob |
+| NTAG215 or NTAG213 round stickers, 25 mm | 1 per disc | **To buy** | |
+| 330 Ω resistor | 1 | Optional | In the LED ring's data line |
+| Hook-up wire | about 15 short lengths | | |
+| M3 × 10 self-tapping screws | 4 | | Or M3 heat-set inserts (set `pilot_d = 4.0`) |
+| USB-C cable and 5 V phone charger | 1 | | |
+| PLA or PETG, white or another light colour | about 120 g | | The LED ring shines through the shell |
 
 ## Quick start
 
@@ -69,11 +73,11 @@ that changes the CAD without updating the previews.
 2. **Wire** the PN532 to the ESP32 over I²C. See [docs/build.md](docs/build.md#wiring).
 3. **Flash once over USB** with [PlatformIO](https://platformio.org/install/cli):
    ```bash
-   cd firmware && PLATFORMIO_BUILD_FLAGS=-DFIRMWARE_VERSION_RAW=v0.0.0 pio run -e esp32dev -t upload
+   cd firmware && PLATFORMIO_BUILD_FLAGS=-DFIRMWARE_VERSION_RAW=v0.0.0 pio run -e esp32s3 -t upload
    ```
    Version `v0.0.0` is older than any release, so on its first boot with Wi-Fi
    the device installs the latest release by itself. That tests the update
-   path at home, before the device leaves. A plain `pio run -e esp32dev -t upload`
+   path at home, before the device leaves. A plain `pio run -e esp32s3 -t upload`
    gives a `dev` build, which never updates itself. Use that one for tinkering.
 4. **Set it up** from a phone: join the `DiscPlayer-Setup` Wi-Fi network, then
    choose the home Wi-Fi and enter the Sonos room name. See [docs/setup.md](docs/setup.md).
@@ -144,7 +148,7 @@ Rules that keep a device in another city reachable:
 ```bash
 cd firmware
 pio test -e native     # unit tests for lib/discplayer, no hardware needed
-pio run -e esp32dev    # compile firmware
+pio run -e esp32s3    # compile firmware
 ```
 
 CI runs both on every push and exports STLs for every CAD part as build artifacts.
