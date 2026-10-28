@@ -46,14 +46,14 @@ switch 2 OFF).
 | IRQ | GPIO 4 |
 | RSTO | GPIO 5 |
 
-Pins can be changed in `player_config.h`.
+Pins can be changed in `firmware/include/board.h`.
 
 ## Assembly
 
 1. Slide the PN532 up into the rails behind the slot from the open bottom of
    the shell, **antenna side towards the slot** and the pin header at the
    bottom. It stops against the underside of the top.
-2. Flash and test the ESP32 *before* closing the box (see the README).
+2. Flash, set up and test the ESP32 *before* closing the box (see the README).
 3. Lay the ESP32 on the base's cradle, USB end against the left wall, and fix
    it with foam tape or a dot of hot glue. Its header pins point down between
    the support blocks.
