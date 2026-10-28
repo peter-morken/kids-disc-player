@@ -6,7 +6,9 @@
 #include "disc_session.h"
 #include "ndef.h"
 #include "soap.h"
+#include "sonos_discovery.h"
 #include "spotify.h"
+#include "version.h"
 
 using namespace discplayer;
 
@@ -160,6 +162,102 @@ void test_extract_rincon_id() {
   TEST_ASSERT_FALSE(extractRinconId("<html>not sonos</html>", id));
 }
 
+// ---------- Sonos discovery ----------
+
+void test_ssdp_response_from_sonos() {
+  const std::string resp =
+      "HTTP/1.1 200 OK\r\n"
+      "CACHE-CONTROL: max-age = 1800\r\n"
+      "EXT:\r\n"
+      "LOCATION: http://192.168.1.20:1400/xml/device_description.xml\r\n"
+      "SERVER: Linux UPnP/1.0 Sonos/80.1-55014 (ZPS40)\r\n"
+      "ST: urn:schemas-upnp-org:device:ZonePlayer:1\r\n"
+      "USN: uuid:RINCON_48A6B8C0FFEE01400::urn:schemas-upnp-org:device:ZonePlayer:1\r\n\r\n";
+  std::string host;
+  TEST_ASSERT_TRUE(parseSsdpSonosHost(resp, host));
+  TEST_ASSERT_EQUAL_STRING("192.168.1.20", host.c_str());
+}
+
+void test_ssdp_response_from_other_device_ignored() {
+  const std::string resp =
+      "HTTP/1.1 200 OK\r\nLOCATION: http://192.168.1.1:49000/igd.xml\r\n"
+      "SERVER: FRITZ!Box UPnP/1.0\r\nST: upnp:rootdevice\r\n\r\n";
+  std::string host;
+  TEST_ASSERT_FALSE(parseSsdpSonosHost(resp, host));
+}
+
+// Trimmed GetZoneGroupState response: a stereo pair in the kids' room (the
+// right speaker is invisible), a grouped living room, and an apostrophe in a
+// room name, which arrives escaped twice.
+const char kZoneGroupStateResponse[] =
+    "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\"><s:Body>"
+    "<u:GetZoneGroupStateResponse xmlns:u=\"urn:schemas-upnp-org:service:ZoneGroupTopology:1\">"
+    "<ZoneGroupState>&lt;ZoneGroupState&gt;&lt;ZoneGroups&gt;"
+    "&lt;ZoneGroup Coordinator=&quot;RINCON_KIDSR01400&quot; ID=&quot;RINCON_KIDSL01400:1&quot;&gt;"
+    "&lt;ZoneGroupMember UUID=&quot;RINCON_KIDSR01400&quot; "
+    "Location=&quot;http://192.168.1.31:1400/xml/device_description.xml&quot; "
+    "ZoneName=&quot;Kids Room&quot; Invisible=&quot;1&quot; SoftwareVersion=&quot;80.1&quot;/&gt;"
+    "&lt;ZoneGroupMember UUID=&quot;RINCON_KIDSL01400&quot; "
+    "Location=&quot;http://192.168.1.30:1400/xml/device_description.xml&quot; "
+    "ZoneName=&quot;Kids Room&quot; SoftwareVersion=&quot;80.1&quot;/&gt;"
+    "&lt;/ZoneGroup&gt;"
+    "&lt;ZoneGroup Coordinator=&quot;RINCON_LIVING01400&quot; ID=&quot;RINCON_LIVING01400:7&quot;&gt;"
+    "&lt;ZoneGroupMember UUID=&quot;RINCON_LIVING01400&quot; "
+    "Location=&quot;http://192.168.1.40:1400/xml/device_description.xml&quot; ZoneName=&quot;Living Room&quot;&gt;"
+    "&lt;Satellite UUID=&quot;RINCON_SUB01400&quot; "
+    "Location=&quot;http://192.168.1.41:1400/xml/device_description.xml&quot; ZoneName=&quot;Living Room&quot;/&gt;"
+    "&lt;/ZoneGroupMember&gt;"
+    "&lt;ZoneGroupMember UUID=&quot;RINCON_EMMA01400&quot; "
+    "Location=&quot;http://192.168.1.50:1400/xml/device_description.xml&quot; "
+    "ZoneName=&quot;Emma&amp;apos;s Room&quot;/&gt;"
+    "&lt;/ZoneGroup&gt;&lt;/ZoneGroups&gt;&lt;/ZoneGroupState&gt;</ZoneGroupState>"
+    "</u:GetZoneGroupStateResponse></s:Body></s:Envelope>";
+
+void test_zone_group_state_skips_invisible_pair_member() {
+  SonosSpeaker sp;
+  TEST_ASSERT_TRUE(findRoomInZoneGroupState(kZoneGroupStateResponse, "kids room", sp));
+  TEST_ASSERT_EQUAL_STRING("192.168.1.30", sp.host.c_str());
+  TEST_ASSERT_EQUAL_STRING("RINCON_KIDSL01400", sp.uuid.c_str());
+}
+
+void test_zone_group_state_room_in_group_and_escaped_name() {
+  SonosSpeaker sp;
+  TEST_ASSERT_TRUE(findRoomInZoneGroupState(kZoneGroupStateResponse, "  Emma's Room ", sp));
+  TEST_ASSERT_EQUAL_STRING("192.168.1.50", sp.host.c_str());
+  TEST_ASSERT_TRUE(findRoomInZoneGroupState(kZoneGroupStateResponse, "Living Room", sp));
+  TEST_ASSERT_EQUAL_STRING("RINCON_LIVING01400", sp.uuid.c_str());
+}
+
+void test_zone_group_state_unknown_room() {
+  SonosSpeaker sp;
+  TEST_ASSERT_FALSE(findRoomInZoneGroupState(kZoneGroupStateResponse, "Kitchen", sp));
+  TEST_ASSERT_FALSE(findRoomInZoneGroupState(kZoneGroupStateResponse, "", sp));
+  TEST_ASSERT_FALSE(findRoomInZoneGroupState("<html>500</html>", "Kids Room", sp));
+}
+
+// ---------- Versions ----------
+
+void test_version_parsing() {
+  Version v;
+  TEST_ASSERT_TRUE(parseVersion("v1.12.3\n", v));
+  TEST_ASSERT_EQUAL(1, v.major);
+  TEST_ASSERT_EQUAL(12, v.minor);
+  TEST_ASSERT_EQUAL(3, v.patch);
+  TEST_ASSERT_TRUE(parseVersion("0.1.0", v));
+  const char* bad[] = {"dev", "", "v1.2", "v1.2.3-rc1", "1.2.3.4", "<!DOCTYPE html>", "v1..3"};
+  for (const char* s : bad) TEST_ASSERT_FALSE_MESSAGE(parseVersion(s, v), s);
+}
+
+void test_version_ordering() {
+  TEST_ASSERT_TRUE(isNewerVersion("v1.0.1", "v1.0.0"));
+  TEST_ASSERT_TRUE(isNewerVersion("v1.10.0", "v1.9.9"));  // numeric, not lexical
+  TEST_ASSERT_TRUE(isNewerVersion("v2.0.0\n", "v1.99.99"));
+  TEST_ASSERT_FALSE(isNewerVersion("v1.0.0", "v1.0.0"));
+  TEST_ASSERT_FALSE(isNewerVersion("v0.9.0", "v1.0.0"));  // never downgrade
+  TEST_ASSERT_FALSE(isNewerVersion("v9.9.9", "dev"));     // USB dev builds stay put
+  TEST_ASSERT_FALSE(isNewerVersion("Not Found", "v1.0.0"));
+}
+
 // ---------- Disc session ----------
 
 void test_session_insert_remove_resume() {
@@ -231,5 +329,12 @@ int main() {
   RUN_TEST(test_session_different_disc_and_swap);
   RUN_TEST(test_session_invalid_disc_does_not_pause);
   RUN_TEST(test_session_survives_millis_wraparound);
+  RUN_TEST(test_ssdp_response_from_sonos);
+  RUN_TEST(test_ssdp_response_from_other_device_ignored);
+  RUN_TEST(test_zone_group_state_skips_invisible_pair_member);
+  RUN_TEST(test_zone_group_state_room_in_group_and_escaped_name);
+  RUN_TEST(test_zone_group_state_unknown_room);
+  RUN_TEST(test_version_parsing);
+  RUN_TEST(test_version_ordering);
   return UNITY_END();
 }

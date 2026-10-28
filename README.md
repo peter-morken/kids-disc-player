@@ -11,9 +11,13 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
  PN532 reader ──I²C── ESP32 ──Wi-Fi, local UPnP/SOAP──▶ Sonos speaker ──▶ Spotify
 ```
 
-- **No cloud, no app, no accounts on the device.** The ESP32 talks to the
-  speaker directly on your LAN (port 1400), the same local API that
-  [SoCo](https://github.com/SoCo/SoCo) and Home Assistant use.
+- **No cloud service, no app, no accounts on the device.** The ESP32 talks to
+  the speaker directly on the home network (port 1400), the same local API that
+  [SoCo](https://github.com/SoCo/SoCo) and Home Assistant use. The only internet
+  traffic is a firmware update check against this repo's GitHub releases at boot.
+- **Set up from a phone, updated remotely.** One firmware build works in any
+  home: Wi-Fi and the Sonos room are entered on the device's setup page, and
+  new releases install themselves on the next power-up.
 - **The disc carries its own link.** Each tag stores a Spotify URL as a
   standard NDEF record, so you never reflash the firmware to add a disc. Write a
   new one with any NFC phone app.
@@ -24,9 +28,10 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 | Path | Contents |
 |---|---|
 | `firmware/` | PlatformIO project for the ESP32 (Arduino framework) |
-| `firmware/lib/discplayer/` | Hardware-free logic: NDEF parsing, Spotify link parsing, Sonos SOAP building, insert/remove state machine. Unit-tested on the host. |
+| `firmware/lib/discplayer/` | Hardware-free logic: NDEF parsing, Spotify links, Sonos SOAP and speaker discovery, version comparison, insert/remove state machine. Unit-tested on the host. |
 | `cad/` | Parametric OpenSCAD models: `disc.scad`, `enclosure.scad`, shared `params.scad` |
-| `docs/` | [Build guide](docs/build.md), [making discs](docs/discs.md) |
+| `docs/` | [Build guide](docs/build.md), [making discs](docs/discs.md), [setup guide for the household](docs/setup.md) |
+| `tools/` | `gen_root_cas.sh` regenerates the CA certificates the updater trusts |
 
 ## Bill of materials (about $15 plus filament)
 
@@ -44,16 +49,17 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 1. **Print** `cad/enclosure.scad` (shell and base) and some `cad/disc.scad`.
    See [docs/build.md](docs/build.md).
 2. **Wire** the PN532 to the ESP32 over I²C. See [docs/build.md](docs/build.md#wiring).
-3. **Configure**:
+3. **Flash once over USB** with [PlatformIO](https://platformio.org/install/cli):
    ```bash
-   cd firmware && cp include/player_config.example.h include/player_config.h
+   cd firmware && PLATFORMIO_BUILD_FLAGS=-DFIRMWARE_VERSION_RAW=v0.0.0 pio run -e esp32dev -t upload
    ```
-   Then set your Wi-Fi details and the speaker's IP. Reserve that IP in your
-   router so it never changes. Also check that Spotify is linked in the Sonos app.
-4. **Flash** with [PlatformIO](https://platformio.org/install/cli):
-   ```bash
-   pio run -e esp32dev -t upload && pio device monitor
-   ```
+   Version `v0.0.0` is older than any release, so on its first boot with Wi-Fi
+   the device installs the latest release by itself. That tests the update
+   path at home, before the device leaves. A plain `pio run -e esp32dev -t upload`
+   gives a `dev` build, which never updates itself. Use that one for tinkering.
+4. **Set it up** from a phone: join the `DiscPlayer-Setup` Wi-Fi network, then
+   choose the home Wi-Fi and enter the Sonos room name. See [docs/setup.md](docs/setup.md).
+   Spotify must be linked in the Sonos app.
 5. **Make discs.** Write a Spotify link to each tag. See [docs/discs.md](docs/discs.md).
 
 ## Behaviour
@@ -66,7 +72,35 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 | Different disc | Starts the new one |
 | Blank or unreadable disc, or Sonos unreachable | LED blinks 3×; nothing else changes |
 
-Timings and volume are in `player_config.h`.
+The start volume is set on the setup page. Pins and timings are in
+`firmware/include/board.h`.
+
+## Releasing and remote updates
+
+```bash
+git tag v1.2.0 && git push origin v1.2.0
+```
+
+CI builds the firmware with that version baked in and publishes `firmware.bin`
+and `version.txt` as the latest GitHub release. At every boot, a device running
+a release build compares its version with `version.txt`. If the release is
+newer, it downloads the image over HTTPS, writes it to its spare app slot,
+verifies it, and restarts into it. Unplugging and replugging the device is
+enough to update it.
+
+Rules that keep a device in another city reachable:
+
+- **Test every release on a second device at home first.** The update check
+  runs right after Wi-Fi connects, before the NFC and Sonos code, so a release
+  that crashes later in startup can still be replaced. A release that breaks
+  Wi-Fi or the updater itself cannot be fixed without USB.
+- **Versions only go up.** A device never installs an older version. To roll
+  back, release the old code under a higher version number.
+- **Don't change the partition table** (`board_build.partitions`) in a
+  release. That only works over USB.
+- **Update failures are harmless.** If GitHub is unreachable, or the download is
+  interrupted, the device keeps running its current firmware and tries again on
+  the next boot.
 
 ## Development
 
@@ -85,9 +119,15 @@ CI runs both on every push and exports STLs for every CAD part as build artifact
   tests check this). The PN532 timing and the CAD fit still need a first real build.
 - **The Sonos local API is undocumented.** Sonos has kept it stable for years,
   and Home Assistant depends on it, but they could change it.
-- **One speaker, set by IP.** With `SONOS_UNGROUP` on (the default), the
-  speaker leaves any group before playing, because Sonos only accepts commands
-  on a group's coordinator.
+- **One speaker, found by room name.** The device looks the room up on each
+  boot, and again after a failed command, so the speaker's IP may change. With
+  `SONOS_UNGROUP` on (the default), the speaker leaves any group before
+  playing, because Sonos only accepts commands on a group's coordinator.
+- **The setup network is open (no password).** Anyone in Wi-Fi range while it
+  is up could join it and read the Wi-Fi password being typed in. It only
+  appears when the device needs setting up, and closes after 5 minutes.
+- **Updates trust whoever controls this GitHub repo.** Turn on two-factor
+  authentication for the account.
 - **Resume continues whatever the speaker last had queued.** If someone
   changes the music from the Sonos app in between, re-inserting the disc
   resumes their music, not the disc's.
