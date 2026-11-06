@@ -43,8 +43,8 @@ part_png() {  # name, camera rotation, stl, colour
   rm -f "$tmp"
 }
 
-png assembly 70,0,335 enclosure.scad
-png cutaway 65,0,35 enclosure.scad -D 'part="cutaway"'
+png assembly 75,0,345 enclosure.scad
+png cutaway 60,0,200 enclosure.scad -D 'part="cutaway"'
 part_png disc 40,0,20 disc-embedded-tag Gold
 part_png knob 50,0,20 knob DimGray
 

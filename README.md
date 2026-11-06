@@ -28,7 +28,7 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 | | |
 |---|---|
 | ![Assembled player](cad/preview/assembly.png) | ![Cutaway](cad/preview/cutaway.png) |
-| The player: disc in the slot, volume knob on the front | Cutaway: NFC reader (red) behind the slot, LED ring behind the knob. The ESP32-S3 sits low on the base, hidden behind the knob |
+| The player, styled as a cassette player: the disc stands in the cassette door with its picture showing, and the volume knob sits in the speaker | Cutaway from behind: NFC reader (red) right behind the disc, LED ring behind the knob, ESP32-S3 low on the base |
 | ![Disc](cad/preview/disc.png) | ![Knob](cad/preview/knob.png) |
 | Disc, front: recess for a picture sticker | Knob, underside: D-shaft bore and nut recess |
 
@@ -64,7 +64,7 @@ are what was ordered. When buying, match the spec in the Notes column.
 | Hook-up wire | about 15 short lengths | | |
 | M3 × 10 self-tapping screws | 4 | | Or M3 heat-set inserts (set `pilot_d = 4.0`) |
 | USB-C cable and 5 V phone charger | 1 | | |
-| PLA or PETG, white or another light colour | about 120 g | | The LED ring shines through the shell |
+| PLA or PETG, white or another light colour | about 180 g | | The LED ring shines through the shell |
 
 ## Quick start
 

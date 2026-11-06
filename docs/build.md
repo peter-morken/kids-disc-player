@@ -26,7 +26,7 @@ The `assembly` part (the default) is a preview only; don't print it.
 
 | Part | Orientation | Notes |
 |---|---|---|
-| Shell | Exported upside down (top face on the bed) | No supports needed. The slot floor bridges about 5 mm. |
+| Shell | Exported upside down (top face on the bed) | No supports needed. The piano keys are flush with the top, so they start on the bed too. The slot floor bridges about 5 mm. Needs a bed at least 160 × 65 mm. |
 | Base | Flat | |
 | Knob | Exported top face down | No supports. Friction fit on the D-shaft; if it's loose, lower `shaft_fit` in `knob.scad`. |
 | Disc | Flat | With `embed_tag = true`, pause at the Z height OpenSCAD prints to the console (2.0 mm by default), drop the sticker in, then resume. Print the first layers in a dark colour and switch filament at the pause for a two-tone disc. |
