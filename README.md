@@ -25,6 +25,18 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 
 ## The design
 
+The enclosure to print is the SolidCraft design in
+[`cad/solidcraft/`](cad/solidcraft): a 130 × 90 × 90 mm box with the disc slot
+on top, a 24-LED ring glowing through the white front around a sun-faced
+knob, and the name "Henriks musikk" inlaid in the top. It comes as one
+multi-colour 3MF, an STL per part, STEP, and the SolidCraft source. Printing,
+colours and assembly are in [docs/build.md](docs/build.md).
+
+**The pictures below show the previous OpenSCAD design, not the SolidCraft
+one.** The layout is similar (slot on top, reader behind it, knob and ring on
+the front), but the box, knob, ring and discs look different. New pictures
+are still to come.
+
 | | |
 |---|---|
 | ![Assembled player](cad/preview/assembly.png) | ![Cutaway](cad/preview/cutaway.png) |
@@ -32,10 +44,11 @@ or song. Pull the disc out and it pauses. Put the same disc back and it resumes.
 | ![Disc](cad/preview/disc.png) | ![Knob](cad/preview/knob.png) |
 | Disc, front: recess for a picture sticker | Knob, underside: D-shaft bore and nut recess |
 
-Printable STLs are in [`cad/stl/`](cad/stl). Click one on GitHub to turn it in
-3D. They're generated from the OpenSCAD sources in `cad/`. After changing
-those, run `tools/render_previews.sh` and commit the result. CI fails a PR
-that changes the CAD without updating the previews.
+**Previous OpenSCAD design.** The parametric OpenSCAD sources in `cad/*.scad`
+are kept for reference; its parts don't fit the SolidCraft ones. Its STLs in
+[`cad/stl/`](cad/stl) and these pictures are generated from them by
+`tools/render_previews.sh`. CI fails a PR that changes a `.scad` file without
+updating them.
 
 ## Repository layout
 
@@ -43,9 +56,10 @@ that changes the CAD without updating the previews.
 |---|---|
 | `firmware/` | PlatformIO project for the ESP32-S3 SuperMini (Arduino framework) |
 | `firmware/lib/discplayer/` | Hardware-free logic: NDEF parsing, Spotify links, Sonos SOAP and speaker discovery, version comparison, insert/remove state machine. Unit-tested on the host. |
-| `cad/` | Parametric OpenSCAD models: `disc.scad`, `enclosure.scad`, shared `params.scad` |
+| `cad/solidcraft/` | **The enclosure to print:** multi-colour 3MF, one STL per part in `stl/`, STEP, and the SolidCraft source (`.sc`) |
+| `cad/*.scad` | Previous design: parametric OpenSCAD models (`disc.scad`, `enclosure.scad`, `knob.scad`, shared `params.scad`) |
+| `cad/stl/`, `cad/preview/` | Generated from the OpenSCAD models: STLs and the pictures above |
 | `docs/` | [Build guide](docs/build.md), [making discs](docs/discs.md), [setup guide for the household](docs/setup.md) |
-| `cad/stl/`, `cad/preview/` | Generated: printable STLs and the pictures above |
 | `tools/` | `render_previews.sh` regenerates the STLs and pictures; `gen_root_cas.sh` regenerates the CA certificates the updater trusts |
 
 ## Bill of materials
@@ -57,19 +71,22 @@ are what was ordered. When buying, match the spec in the Notes column.
 |---|---|---|---|
 | ESP32-S3 SuperMini | 1 | In stock (5-pack) | Solder wires directly to the pads; no pin headers needed |
 | PN532 NFC module "V3" (red/blue, 42.7 × 40.4 mm) | 1 | In stock (5 pcs) | Must have I²C DIP switches |
-| WS2812B ring, 12 LEDs, 50 mm outer / 36 mm inner diameter | 1 | **To buy** | Inner diameter varies (35–37 mm) between makers; the enclosure pocket fits 36 ± 1 mm. The loose WS2812B LEDs in stock don't fit |
-| EC11 rotary encoder with push switch, 20 mm D-shaft | 1 | **To buy** | Must be **20 pulses / 20 detents** per turn: with 15 pulses / 30 detents, the knob only registers every second click. 5 pins (3 encoder + 2 switch) |
-| NTAG215 round NFC stickers, 25 mm | 1 per disc | **To buy** | NTAG213 works too. Not MIFARE Classic |
+| WS2812B ring, 24 LEDs, 75 mm outside / 65 mm inside | 1 | In stock | Glued into the recess behind the front wall |
+| KY-040 rotary encoder module, threaded M7 bushing | 1 | In stock | Pins CLK, DT, SW, +, GND. Onboard 10 kΩ pull-ups on CLK and DT, so **+ goes to 3V3**, not 5V. Needs 20 pulses / 20 detents per turn (most KY-040s). Held by its own M7 nut and washer |
+| NTAG215 round NFC stickers, at most 26.5 mm across | 1 per disc | **To buy** | NTAG213 works too. Not MIFARE Classic |
+| Niimbot R4949 labels, 49 mm round | 1 per disc | **To buy** | Printed on a Niimbot B21. PET or waterproof ones last longer |
 | 330 Ω resistor | 1 | Optional | In the LED ring's data line |
 | Hook-up wire | about 15 short lengths | | |
-| M3 × 10 self-tapping screws | 4 | | Or M3 heat-set inserts (set `pilot_d = 4.0`) |
-| USB-C cable and 5 V phone charger | 1 | | |
-| PLA or PETG, white or another light colour | about 120 g | | The LED ring shines through the shell |
+| M3 machine screws, about 6–10 mm long | 10 | | Cut their own thread in 2.7 mm pilot holes: 4 countersunk for the base, 2 each for the PN532, the ESP32 clamp and the cable clamp |
+| USB-C cable and 5 V phone charger | 1 | | Plug and boot must fit within **30 mm**; the cable runs through a notch sized for a 4 mm thick cable |
+| PLA or PETG: white or natural | about 200 g | | Housing. Must be light: the LED ring shines through it |
+| PLA or PETG: sky blue, yellow, pink, dark brown | | | Sky blue about 50 g (base and clamps), yellow about 30 g (knob), pink and dark brown a few grams (name and knob-face inlays) |
+| PLA or PETG: bright colours | 15–20 g per disc | | One colour per kind of disc |
 
 ## Quick start
 
-1. **Print** `cad/enclosure.scad` (shell and base) and some `cad/disc.scad`.
-   See [docs/build.md](docs/build.md).
+1. **Print** the parts in `cad/solidcraft/` and some discs.
+   See [docs/build.md](docs/build.md#printing).
 2. **Wire** the PN532 to the ESP32 over I²C. See [docs/build.md](docs/build.md#wiring).
 3. **Flash once over USB** with [PlatformIO](https://platformio.org/install/cli):
    ```bash
@@ -94,7 +111,7 @@ are what was ordered. When buying, match the spec in the Notes column.
 | Disc pulled in and out quickly | Nothing: too short to start, or too short to count as removed |
 | Different disc | Starts the new one |
 | End of the disc | Stops (repeat and shuffle are turned off when a disc starts) |
-| Knob turned | Changes the volume in steps of 2, never above the max; the ring shows the level as a fraction of the max, and the top LED blinks red at the cap |
+| Knob turned | Changes the volume in steps of 2, never above the max; the ring shows the level as a fraction of the max, and the last lit LED blinks red at the cap |
 | Knob held 5 s | **Parent function:** the speaker's current volume becomes the new max (white flashes). See below |
 | Blank disc, or speaker unreachable | Ring flashes red; nothing else changes |
 
@@ -151,13 +168,17 @@ pio test -e native     # unit tests for lib/discplayer, no hardware needed
 pio run -e esp32s3    # compile firmware
 ```
 
-CI runs both on every push and exports STLs for every CAD part as build artifacts.
+CI runs both on every push, and renders the previous OpenSCAD design's STLs and
+pictures as build artifacts.
 
 ## Known limitations and risks
 
 - **Not yet tested end to end on hardware.** The logic is unit-tested, and the
   Sonos URIs and metadata match SoCo's `ShareLinkPlugin` byte for byte (the
-  tests check this). The PN532 timing and the CAD fit still need a first real build.
+  tests check this). Still to check on a first real build: the PN532 timing,
+  the KY-040's clicks (one volume step each), which LED the ring's gauge
+  starts on and which way it fills, and the print fit (disc in the slot,
+  modules in their mounts, the USB-C cable in its 4 mm notch).
 - **The Sonos local API is undocumented.** Sonos has kept it stable for years,
   and Home Assistant depends on it, but they could change it.
 - **One speaker, found by room name.** The device looks the room up on each

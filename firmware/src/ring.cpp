@@ -17,6 +17,19 @@ constexpr uint32_t kOkMs = 700;
 constexpr uint32_t kErrorMs = 900;
 constexpr uint32_t kVolumeMs = 2500;
 constexpr uint32_t kMaxSavedFlashMs = 800;
+// One spinner turn takes the same time on any ring, and the tail covers the
+// same quarter turn: 3 LEDs on a 12-LED ring, 6 on a 24-LED one.
+constexpr uint32_t kSpinnerTurnMs = 840;
+constexpr int kSpinnerTail = RING_LED_COUNT / 4 > 0 ? RING_LED_COUNT / 4 : 1;
+
+// Worst case is every LED on full white (the "max saved" flash). A WS2812B
+// draws about 20 mA per colour at full duty plus ~1 mA idle; NeoPixel scales
+// colours by (brightness + 1) / 256. Keep the ring under 300 mA so it, the
+// ESP32-S3 and the PN532 together stay around the 500 mA a USB port gives.
+constexpr int kRingWorstCaseMa = RING_LED_COUNT * 60 * (RING_BRIGHTNESS + 1) / 256 + RING_LED_COUNT;
+static_assert(kRingWorstCaseMa <= 300, "RING_BRIGHTNESS too high for RING_LED_COUNT on USB power");
+static_assert(RING_FIRST_LED_OFFSET >= 0 && RING_FIRST_LED_OFFSET < RING_LED_COUNT,
+              "RING_FIRST_LED_OFFSET must be a physical LED index, 0 to RING_LED_COUNT - 1");
 
 Adafruit_NeoPixel pixels(RING_LED_COUNT, RING_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -37,17 +50,23 @@ uint32_t scale(uint8_t r, uint8_t g, uint8_t b, float k) {
                                   static_cast<uint8_t>(b * k));
 }
 
+// Sets the LED at ring position `pos` (0 = gauge start, clockwise from the front).
+void setLed(int pos, uint32_t color) {
+  pixels.setPixelColor(discplayer::ringLed(pos, RING_LED_COUNT, RING_FIRST_LED_OFFSET, RING_REVERSED), color);
+}
+
 void spinner(uint32_t now, uint8_t r, uint8_t g, uint8_t b) {
-  const int head = (now / 70) % RING_LED_COUNT;
-  for (int tail = 0; tail < 3; ++tail)
-    pixels.setPixelColor((head - tail + RING_LED_COUNT) % RING_LED_COUNT, scale(r, g, b, 1.0f / (1 + 2 * tail)));
+  const int head = discplayer::spinnerHead(now, RING_LED_COUNT, kSpinnerTurnMs);
+  // Fades by angle, so it matches the old 12-LED tail of 1, 1/3, 1/5.
+  for (int tail = 0; tail < kSpinnerTail; ++tail)
+    setLed(head - tail, scale(r, g, b, 1.0f / (1 + 2 * 3.0f * tail / kSpinnerTail)));
 }
 
 void gauge(uint32_t now) {
   const int lit = discplayer::gaugeLeds(gaugeVolume, gaugeMax, RING_LED_COUNT);
-  for (int i = 0; i < lit; ++i) pixels.setPixelColor(i, Adafruit_NeoPixel::Color(255, 120, 20));
+  for (int i = 0; i < lit; ++i) setLed(i, Adafruit_NeoPixel::Color(255, 120, 20));
   // At the cap, the last lit LED blinks red: "that's as loud as it goes".
-  if (gaugeAtCap && lit > 0 && (now / 150) % 2 == 0) pixels.setPixelColor(lit - 1, Adafruit_NeoPixel::Color(255, 0, 0));
+  if (gaugeAtCap && lit > 0 && (now / 150) % 2 == 0) setLed(lit - 1, Adafruit_NeoPixel::Color(255, 0, 0));
 }
 
 // Returns false once the overlay has finished.

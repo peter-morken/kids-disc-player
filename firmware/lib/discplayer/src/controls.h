@@ -4,8 +4,8 @@
 
 namespace discplayer {
 
-// Full-step decoder for a mechanical quadrature encoder (EC11 and similar:
-// one full A/B cycle per detent). Feed it the pin levels on every sample; it
+// Full-step decoder for a mechanical quadrature encoder (EC11, KY-040 and
+// similar: one full A/B cycle per detent, both pins high at rest). Feed it the pin levels on every sample; it
 // returns +1 or -1 when a detent completes, 0 otherwise. Contact bounce and
 // half-turned-back detents produce nothing. Based on Ben Buxton's state table.
 class QuadratureDecoder {
@@ -57,5 +57,15 @@ bool maxFromCurrentVolume(int current, int& maxVolume);
 // LEDs to light for a volume gauge where the full ring means maxVolume.
 // Any audible volume lights at least one LED.
 int gaugeLeds(int volume, int maxVolume, int ledCount);
+
+// Physical LED for ring position `pos` (0 = where the gauge starts, counting
+// clockwise as seen from the front). `firstLed` is the physical index of
+// position 0; `reversed` is for rings whose data runs anticlockwise as
+// mounted. Any `pos` or `firstLed`, including negative ones, wraps round.
+int ringLed(int pos, int ledCount, int firstLed, bool reversed);
+
+// Ring position of a spinner's head at `nowMs`, going round once per `turnMs`
+// whatever the LED count.
+int spinnerHead(uint32_t nowMs, int ledCount, uint32_t turnMs);
 
 }  // namespace discplayer

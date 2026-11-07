@@ -1,0 +1,5 @@
+# Binary CAD files: never diff or merge them as text.
+*.stl binary
+*.3mf binary
+*.step binary
+*.sc binary
