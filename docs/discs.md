@@ -3,7 +3,7 @@
 Each disc's NFC tag holds a Spotify link. The player reads that link, so adding
 a new disc never needs a firmware change.
 
-A disc is printed from `cad/solidcraft/stl/disc.stl`: 60 mm across and 6 mm
+A disc is printed from `cad/stl/disc.stl`: 60 mm across and 6 mm
 thick. One face has a round recess, 50 mm across and 0.4 mm deep, for a
 49 mm label. In the middle of that recess is a 26.5 mm pocket, 0.8 mm deep,
 for the NFC sticker. The tag reads through the plastic, so the disc works

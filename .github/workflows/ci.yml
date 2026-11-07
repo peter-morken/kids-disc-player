@@ -30,35 +30,11 @@ jobs:
           pio run -e esp32s3
           grep -aq "kids-disc-player/v0.0.0" .pio/build/esp32s3/firmware.bin
 
-  cad:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0  # the freshness check diffs against the PR base
-      - name: Previews updated with the CAD
-        if: github.event_name == 'pull_request'
-        run: |
-          changed=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
-          if grep -q '^cad/.*\.scad$' <<<"$changed" && ! grep -qE '^cad/(preview|stl)/' <<<"$changed"; then
-            echo "::error::cad/*.scad changed but cad/preview and cad/stl did not. Run tools/render_previews.sh and commit the result."
-            exit 1
-          fi
-      - run: sudo apt-get update && sudo apt-get install -y openscad xvfb
-      - name: Render previews and STLs
-        run: tools/render_previews.sh
-      - uses: actions/upload-artifact@v7
-        with:
-          name: cad
-          path: |
-            cad/stl/
-            cad/preview/
-
   # Pushing a tag like v1.2.0 publishes firmware.bin + version.txt as the latest
   # GitHub release. Devices in the field install it on their next boot.
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [firmware, cad]
+    needs: [firmware]
     runs-on: ubuntu-latest
     permissions:
       contents: write

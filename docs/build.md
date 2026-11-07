@@ -3,7 +3,7 @@
 ## Printing
 
 The design to print is the SolidCraft enclosure in
-[`cad/solidcraft/`](../cad/solidcraft):
+[`cad/`](../cad):
 
 | File | What it is |
 |---|---|
@@ -72,15 +72,12 @@ Without a multi-material printer, print the housing and knob alone. The
 pockets then show as an engraved name and face; or print the inlays on their
 own and glue them in.
 
-### Previous OpenSCAD design
+### Earlier OpenSCAD design
 
-The parametric OpenSCAD design in `cad/*.scad` (12-LED 50 mm ring, bare EC11
-encoder, 54 mm × 4 mm discs) is kept for reference. **Don't mix its parts
-with the SolidCraft ones**: the discs, ring and encoder are different sizes.
-CI still renders it into [`cad/stl/`](../cad/stl) and
-[`cad/preview/`](../cad/preview). After changing a `.scad` file, run
-`tools/render_previews.sh` and commit the result. Keep the SolidCraft STLs
-out of `cad/stl/`, because that folder is regenerated from OpenSCAD.
+An earlier parametric OpenSCAD design (12-LED 50 mm ring, bare EC11 encoder,
+54 mm × 4 mm discs) was removed from the repo; it is still in the git history
+before this change. **Don't mix its parts with these**: the discs, ring and
+encoder are different sizes.
 
 ## Wiring
 
