@@ -43,7 +43,12 @@
 #define PN532_IRQ 7
 #define PN532_RST 6
 
-// --- Volume knob: EC11 rotary encoder with push switch, common pin to GND ---
+// --- Volume knob: KY-040 rotary encoder module (threaded M7 bushing) ---
+// Wire CLK -> A, DT -> B, SW -> switch, + -> 3V3 (never 5V: the module's own
+// 10k pull-ups on CLK and DT would then pull the ESP32's pins to 5 V), GND.
+// The internal pull-ups are switched on too; in parallel with the module's
+// they're harmless, and SW needs them (most KY-040s fit no pull-up there).
+// Needs a 20-pulse / 20-detent encoder (one full A/B cycle per click).
 #define KNOB_A_PIN 4
 #define KNOB_B_PIN 5
 #define KNOB_SWITCH_PIN 10
@@ -52,10 +57,19 @@
 // Hold the knob this long to save the speaker's current volume as the new max.
 #define KNOB_LONG_PRESS_MS 5000
 
-// --- LED ring around the knob: WS2812/NeoPixel, 5 V, data in ---
+// --- LED ring around the knob: WS2812B/NeoPixel, 24 LEDs, 75 mm, 5 V, data in ---
 #define RING_PIN 2
-#define RING_LED_COUNT 12
-// 0-255. The ring sits in a bedroom; keep it dim. Also limits current draw.
+#define RING_LED_COUNT 24
+// Where the volume gauge starts and which way it fills, so it reads like a
+// dial however the ring ended up glued in. The gauge starts at physical LED
+// RING_FIRST_LED_OFFSET (LED 0 is the one next to DIN) and fills clockwise
+// as seen from the front. Set RING_REVERSED to 1 if it fills anticlockwise.
+// See docs/build.md, "Lining up the LED ring".
+#define RING_FIRST_LED_OFFSET 0
+#define RING_REVERSED 0
+// 0-255. The ring sits in a bedroom; keep it dim. Also limits current draw:
+// at 40, all 24 LEDs on full white draw about 250 mA (checked at compile
+// time in ring.cpp).
 #define RING_BRIGHTNESS 40
 
 // --- Behaviour ---

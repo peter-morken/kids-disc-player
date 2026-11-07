@@ -28,6 +28,8 @@ const uint8_t kTable[7][4] = {
 
 int clampInt(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
+int wrap(int v, int n) { return ((v % n) + n) % n; }
+
 }  // namespace
 
 int QuadratureDecoder::update(bool a, bool b) {
@@ -79,6 +81,16 @@ int gaugeLeds(int volume, int maxVolume, int ledCount) {
   if (maxVolume <= 0 || volume <= 0 || ledCount <= 0) return 0;
   const int lit = (volume * ledCount + maxVolume - 1) / maxVolume;  // round up
   return clampInt(lit, 1, ledCount);
+}
+
+int ringLed(int pos, int ledCount, int firstLed, bool reversed) {
+  if (ledCount <= 0) return 0;
+  return wrap(firstLed + (reversed ? -wrap(pos, ledCount) : wrap(pos, ledCount)), ledCount);
+}
+
+int spinnerHead(uint32_t nowMs, int ledCount, uint32_t turnMs) {
+  if (ledCount <= 0 || turnMs == 0) return 0;
+  return static_cast<int>(static_cast<uint64_t>(nowMs % turnMs) * static_cast<uint32_t>(ledCount) / turnMs);
 }
 
 }  // namespace discplayer

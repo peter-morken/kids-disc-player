@@ -281,6 +281,67 @@ void test_gauge_leds() {
   TEST_ASSERT_EQUAL(6, gaugeLeds(20, 40, 12));
   TEST_ASSERT_EQUAL(12, gaugeLeds(40, 40, 12));
   TEST_ASSERT_EQUAL(12, gaugeLeds(70, 40, 12));
+  // 24-LED ring: every 2-volume knob step still moves the gauge.
+  TEST_ASSERT_EQUAL(1, gaugeLeds(1, 40, 24));
+  TEST_ASSERT_EQUAL(2, gaugeLeds(2, 40, 24));
+  TEST_ASSERT_EQUAL(12, gaugeLeds(20, 40, 24));
+  TEST_ASSERT_EQUAL(24, gaugeLeds(40, 40, 24));
+  TEST_ASSERT_EQUAL(24, gaugeLeds(39, 40, 24));
+  int prev = 0;
+  for (int v = 0; v <= 40; v += kVolumeStep) {
+    const int lit = gaugeLeds(v, 40, 24);
+    TEST_ASSERT_TRUE(lit > prev || v == 0);
+    prev = lit;
+  }
+}
+
+void test_ring_led_mapping() {
+  // Defaults: position = physical index.
+  for (int i = 0; i < 24; ++i) TEST_ASSERT_EQUAL(i, ringLed(i, 24, 0, false));
+  // Gauge starts at physical LED 5 and fills upwards.
+  TEST_ASSERT_EQUAL(5, ringLed(0, 24, 5, false));
+  TEST_ASSERT_EQUAL(23, ringLed(18, 24, 5, false));
+  TEST_ASSERT_EQUAL(0, ringLed(19, 24, 5, false));
+  TEST_ASSERT_EQUAL(4, ringLed(23, 24, 5, false));
+  // Reversed: fills downwards from the start LED.
+  TEST_ASSERT_EQUAL(5, ringLed(0, 24, 5, true));
+  TEST_ASSERT_EQUAL(4, ringLed(1, 24, 5, true));
+  TEST_ASSERT_EQUAL(0, ringLed(5, 24, 5, true));
+  TEST_ASSERT_EQUAL(23, ringLed(6, 24, 5, true));
+  TEST_ASSERT_EQUAL(6, ringLed(23, 24, 5, true));
+  TEST_ASSERT_EQUAL(23, ringLed(1, 24, 0, true));
+  // Out-of-range positions and offsets wrap instead of indexing off the strip.
+  TEST_ASSERT_EQUAL(1, ringLed(25, 24, 0, false));
+  TEST_ASSERT_EQUAL(23, ringLed(-1, 24, 0, false));
+  TEST_ASSERT_EQUAL(22, ringLed(0, 24, -2, false));
+  TEST_ASSERT_EQUAL(2, ringLed(0, 24, 26, true));
+  // Every mapping is a permutation: each LED is used exactly once.
+  for (int offset = -3; offset < 27; ++offset) {
+    for (int rev = 0; rev < 2; ++rev) {
+      bool seen[24] = {};
+      for (int i = 0; i < 24; ++i) {
+        const int led = ringLed(i, 24, offset, rev);
+        TEST_ASSERT_TRUE(led >= 0 && led < 24);
+        TEST_ASSERT_FALSE(seen[led]);
+        seen[led] = true;
+      }
+    }
+  }
+  TEST_ASSERT_EQUAL(0, ringLed(3, 0, 0, false));
+}
+
+void test_spinner_head() {
+  // One turn per 840 ms on either ring size; 24 LEDs just take finer steps.
+  TEST_ASSERT_EQUAL(0, spinnerHead(0, 24, 840));
+  TEST_ASSERT_EQUAL(0, spinnerHead(34, 24, 840));
+  TEST_ASSERT_EQUAL(1, spinnerHead(35, 24, 840));
+  TEST_ASSERT_EQUAL(12, spinnerHead(420, 24, 840));
+  TEST_ASSERT_EQUAL(23, spinnerHead(839, 24, 840));
+  TEST_ASSERT_EQUAL(0, spinnerHead(840, 24, 840));
+  TEST_ASSERT_EQUAL(6, spinnerHead(420, 12, 840));
+  TEST_ASSERT_EQUAL(1, spinnerHead(70, 12, 840));  // same as the old now / 70 on 12 LEDs
+  TEST_ASSERT_TRUE(spinnerHead(0xFFFFFFFFu, 24, 840) < 24);
+  TEST_ASSERT_EQUAL(0, spinnerHead(100, 24, 0));
 }
 
 // ---------- Sonos state ----------
@@ -509,6 +570,8 @@ int main() {
   RUN_TEST(test_knob_when_speaker_is_above_cap);
   RUN_TEST(test_max_volume_and_start_volume);
   RUN_TEST(test_gauge_leds);
+  RUN_TEST(test_ring_led_mapping);
+  RUN_TEST(test_spinner_head);
   RUN_TEST(test_parse_volume);
   RUN_TEST(test_soap_value_and_empty_element);
   RUN_TEST(test_queue_fingerprint);
